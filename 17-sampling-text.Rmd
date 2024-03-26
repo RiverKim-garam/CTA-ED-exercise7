@@ -1,0 +1,170 @@
+# Exercise 7: Sampling text information
+
+# Name: River Kim
+
+# Date: 26-03-24
+
+## Introduction
+
+The hands-on exercise for this week focuses on how to collect and/or sample text information.
+
+In this tutorial, you will learn how to:
+
+-   Access text information from online corpora
+-   Query text information using different APIs
+-   Scrape text information programmatically
+-   Transcribe text information from audio
+-   Extract text information from images
+
+## Online corpora
+
+### Replication datasets
+
+There are large numbers of online corpora and replication datasets available to access freely online. We will first access such an example using the `dataverse` package in R, which allows us to download directly from replication data repositories stored at the [Harvard Dataverse](https://dataverse.harvard.edu/).
+
+```{r, message = F, warning = F}
+library(dataverse)
+library(dplyr)
+```
+
+Let's take an example dataset in which we might be interested: the UK parliamentary speech data from
+
+We first need to set an en environment variable as so.
+
+```{r}
+Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
+```
+
+We can then search out the files that we want by specifying the DOI of the publication data in question. We can find this as a series of numbers and letters that come after "<https://doi.org/>" as shown below.
+
+![](data/sampling/doi.png){width="100%"}
+
+```{r}
+dataset <- get_dataset("10.7910/DVN/QDTLYV")
+dataset$files[c("filename", "contentType")]
+```
+
+We choose to get the UK data from these files, which is listed under "UK_data.csv." We can then download this directly in the following way (this will take some time as the file size is \>1GB).
+
+```{r, eval = F}
+data <- get_dataframe_by_name(
+  "uk_data.csv",
+  "10.7910/DVN/QDTLYV",
+  .f = function(x) read.delim(x, sep = ","))
+
+```
+
+Of course, we could also download these data manually, by clicking the buttons at the relevant [Harvard Dataverse](https://dataverse.harvard.edu/)---but it is sometimes useful to build in every step of your data collection to your code documentation, making the analysis entirely programatically reproducible from start to finish.
+
+Note as well that we don't have to search out specific datasets that we already know about. We can also use the `dataverse` package to search datasets or dataverses. We can do this very simply in the following way.
+
+```{r}
+search_results <- dataverse_search("corpus politics text", type = "dataset", per_page = 10)
+
+search_results[,1:3]
+```
+
+### Curated corpora
+
+There are, of course, many other sources you might go to for text information. I list some of these that might be of interest below:
+
+-   Large English-language corpora: <https://www.corpusdata.org/>
+-   Wikipedia data dumps: <https://meta.wikimedia.org/wiki/Data_dumps>
+    -   English version of dumps [here](https://dumps.wikimedia.org/enwiki/)
+-   Scottish Corpus of Texts & Speech: <https://www.scottishcorpus.ac.uk/>
+-   Corpus of Scottish modern writing: <https://www.scottishcorpus.ac.uk/cmsw/>
+-   The Manifesto Corpus: <https://manifesto-project.wzb.eu/information/documents/corpus>
+-   Reddit Pushshift data: <https://files.pushshift.io/reddit/>
+-   Mediacloud: <https://mediacloud.org/>
+    -   R package: <https://github.com/joon-e/mediacloud>
+
+**Feel free to recommend any further sources and I will add them to this list, which is intended as a growing index of relevant text corpora for social science research!**
+
+## Using APIs
+
+In order to use the YouTube API, we'll first need to get our authorization token. These can be obtained by anybody, with or without an academic profile (i.e., unlike `academictwitteR`) in previous worksheets.
+
+In order to get you authorization credentials, you can follow this [guide](https://developers.google.com/youtube/v3/getting-started). You will need to have an account on the Google Cloud console in order to do this. The main three steps are to:
+
+1.  create a "Project" on the Google Cloud console;
+2.  to associate the YouTube API with this Project;
+3.  to enable the API keys for the API
+
+Once you have created a Project (here: called "tuberalt1" in my case) you will see a landing screen like this.
+
+![](data/sampling/Screenshot%202022-10-31%20at%2014.59.25.jpg)
+
+We can then get our credentials by navigating to the menu on the left hand side and selecting credentials:
+
+![](data/sampling/Screenshot%202022-10-31%20at%2014.59.41.jpg)
+
+Now we click on the name of our project ("tuberalt1") and we will be taken to a page containing two pieces of information: our "client ID" and "client secret".
+
+![](data/sampling/Screenshot%202023-03-15%20at%2015.55.31.png)
+
+The client ID is referred to below as our "app ID" in the `tuber` packaage and the client secret is our "app secret" mentioned in the `tuber` package.
+
+![](data/sampling/Screenshot%202023-03-15%20at%2015.55.45.png)
+
+Once we have our credentials, we can log them in our R environment with the `yt_oauth` function in the `tuber` package. This function takes two arguments: an "app ID" and an "app secret". Both of these will be provided to you once you have associated the YouTube API with your Google Cloud console project.
+
+## Getting YouTube data
+
+In the paper by @haroon2022, the authors analyze the recommended videos for a particular used based on their watch history and on a seed video. In the below, we won't replicate the first step but we will look at the recommended videos that appear based on a seed video.
+
+In this case, our seed video is a video by Jordan Peterson predicting the death of mainstream media. This is fairly "alternative" content and is actively taking a stance against mainstream media. So does this mean YouTube will learn to recommend us *away* from mainstream content?
+
+```{r, eval = F}
+library(tidyverse)
+library(readxl)
+devtools::install_github("soodoku/tuber") # need to install development version is there is problem with CRAN versions of the package functions
+library(tuber)
+
+install.packages("googleAuthR")
+library(googleAuthR)
+gar_auth(email = "1004grk@gmail.com")
+
+yt_oauth("792464684907-4ne6eqremc83rpedeaeudbetosfu7udq.apps.googleusercontent.com","AIzaSyBn_2WBlpZlRNpW81YQ2ePOVeFoqt1l_dU")
+
+#Access blocked: 24CES Text Analysis’s request is invalid
+#You can’t sign in because 24CES Text Analysis sent an invalid request. You can try again later, or contact the developer about this issue. Learn more about this error
+#If you are a developer of 24CES Text Analysis, see error details.
+#Error 400: invalid_request
+
+#get related videos
+startvid <- "1Gp7xNnW5n8"
+rel_vids <- get_related_videos(startvid, max_results = 50, safe_search = "none")
+
+
+```
+
+In the above, we first take the unique identifying code string for the video. You can find this in the url for the video as shown below.
+
+![](data/sampling/Screenshot%202022-10-31%20at%2015.16.19.jpg)
+
+We can then collect the videos recommended on the basis of having this video as the seed video. We store these as the data.frame object `rel_vids`.
+
+And we can have a look at the recommended videos on the basis of this seed video below.
+
+```{r, echo = F, eval = T}
+library(rmarkdown)
+rel_vids <- readRDS("data/sampling/ytvids_recommended.rds")
+paged_table(rel_vids)
+```
+
+It seems YouTube recommends us back a lot of videos relating to Jordan Peterson. Some of these are from more mainstream outlets; others are from more obscure sources.
+
+## Questions
+
+1.  Make your own request to the YouTube API for a different seed video.
+
+```{r, eval = F}
+newvideo <- "XdZTAt6-O8E&t=2129"
+related_video <- get_related_videos(newvideo, max_results = 50, safe_search = "none")
+```
+
+2.  Collect one video ID for each of the channels included in the resulting data
+
+```{r}
+
+```
